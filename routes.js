@@ -40,6 +40,7 @@ router.get("/users", async function (req, res, next) {
         else {
           filteredByMaxAge = filteredByMinAge;
         }
+        console.log(filteredByMaxAge)
         
         let filteredUsers =[];        
           for (let user of filteredByMaxAge) {     
@@ -70,43 +71,47 @@ router.get("/users", async function (req, res, next) {
             }
           };
         
-        // const results =[];
+        const results =[];
         
-        // for (let row of result.rows) { 
-        //   const { user_id, user_name, user_age, user_fav_color, last_location, lat, long } = row;
+        for (let user of filteredUsers) {
+          const { user_id, user_name, user_age, user_fav_color } = user;
 
-        //   results.push(
-        //     {"type": "user",
-        //     "locationHistory": {
-        //       "type": "FeatureCollection",
-        //       "features":
-        //       [
-        //         {
-        //           "type": "Feature",
-        //           "properties": {
-        //             "city": last_location
-        //           },
-        //           "geometry": {
-        //             "type": "Point",
-        //             "coordinates": [lat,long]
-        //           }
-        //         }
-        //       ]
-        //     },
-        //     "properties":
-        //       {
-        //         "id": user_id,
-        //         "name": user_name, 
-        //         "age": user_age,
-        //         "fav_color": user_fav_color
-        //       }
-        //   });
-        // }       
+          user["locationHistory"] =  {
+            "type": "FeatureCollection",
+            "features":
+            [
+              {
+                "type": "Feature",
+                "properties": {
+                  "city": user.last_location
+                },
+                "geometry": {
+                  "type": "Point",
+                  "coordinates": [user.lat, user.long]
+                }
+              }
+            ]
+          }
+
+          results.push(
+            {"type": "user",
+            "locationHistory": user.locationHistory,
+            "properties":
+              {
+                "id": user_id,
+                "name": user_name, 
+                "age": user_age,
+                "fav_color": user_fav_color
+              }
+            });
+          }   
+          
+        
 
         return res.json({
             "metadata": metadata,
-            "num_results": filteredUsers.length,
-            "results": filteredUsers
+            "num_results": results.length,
+            "results": results
           });
 
     }

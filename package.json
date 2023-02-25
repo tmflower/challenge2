@@ -4,7 +4,7 @@
   "description": "## What’s Required",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest"
   },
   "repository": {
     "type": "git",
@@ -20,6 +20,7 @@
     "cors": "^2.8.5",
     "express": "^4.18.2",
     "haversine-distance": "^1.2.1",
-    "pg": "^8.9.0"
+    "pg": "^8.9.0",
+    "supertest": "^6.3.3"
   }
 }
