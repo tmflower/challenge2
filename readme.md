@@ -30,6 +30,8 @@ Given the following request:
 
 GET `/users?fav_color=red&dist=100&origin=37.774929,-122.419416&min_age=21&max_age=29`
 
+// users?favColor=red&dist=100&origin=37.774929,-122.419416&minAge=21&maxAge=29
+
 The expected response should contain the following:
 
 ```json
