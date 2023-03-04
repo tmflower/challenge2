@@ -11,7 +11,7 @@ router.get("/users", async function (req, res, next) {
 
       // get all the users first
       const result = await db.query(
-        'SELECT user_name, user_age, user_fav_color FROM users');
+        'SELECT user_id, user_name, user_age, user_fav_color FROM users');
 
       let users = result.rows;      
       
@@ -42,8 +42,12 @@ router.get("/users", async function (req, res, next) {
         filteredByMaxAge = filteredByMinAge;
       }
 
+      
       // For users that meet all query terms, get locations from db
       let userLocations=[];
+      let locationData=[];
+      // if (dist && origin) {
+
       const names = filteredByMaxAge.map(user => user.user_name);
       for (let name of names) {
         let result = await db.query(`
@@ -59,7 +63,7 @@ router.get("/users", async function (req, res, next) {
         locationNames.push(location.last_location);
       }
 
-      let locationData=[];
+      
       for (let location of locationNames) {         
         let result = await db.query(`
         SELECT last_location, lat, long FROM locations WHERE last_location = $1`, [location]); 
@@ -67,7 +71,7 @@ router.get("/users", async function (req, res, next) {
           locationData.push(row)
         }
       }
-
+      
       // filter locations to return only those within range of chosen distance
       let locationsInRange =[];        
         for (let coords of locationData) { 
@@ -82,80 +86,100 @@ router.get("/users", async function (req, res, next) {
           }
         }
       }
-
-// console.log("IN RANGE", locationsInRange)
-
+console.log(locationsInRange)
       // associate filtered locations with users
       const validLocations = locationsInRange.map(location => location.last_location);
-    
+   
       userLocations = userLocations.filter(userLocation => validLocations.includes(userLocation.last_location));
-      // console.log("USER LOCATIONS", userLocations)
 
       const validNames = userLocations.map(location => location.user_name);
 
-      // console.log("VALID Names", validNames)
-
       users = filteredByMaxAge.filter(user => validNames.includes(user.user_name));
-      // console.log(users)
+    // }
 
-      const cities = [];
-      let newLocation;
+    // else users = filteredByMaxAge;
+
+    const cities = [];
+    let newLocation;
+      
+    if (userLocations.length) {console.log(userLocations, "*****************")
       for (let user of users) { 
-        for (let userLocation of userLocations) { 
+        for (let userLocation of userLocations) { console.log(userLocation)
           if (userLocation.last_location !== null) { 
-            // console.log("LOCATION DATA", locationData)
               newLocation = {
                 "city": userLocation.last_location
               }
               cities.push(newLocation)
             }
         }
-        user["cities"] = cities
-      }
-      console.log("CITIES", cities)
+        user["cities"] = cities;
+        console.log(user.cities, "*****************")
+      } 
+    }
+
+    console.log("CITIES", cities)
     
-      const coords = [];
-      let newCoords;
-      for (let user of users) {
-        for (let data of locationData) {
-          // console.log("THIS", user.cities[0].city, data.last_location)
-          if (user.cities[0].city === data.last_location) {     
-            // console.log("THIS", data);
-               
-            // newCoords = {
-            //   "lat": data.lat,
-            //   "long": data.long
-            // }
-            // coords.push(newCoords); console.log("COORDS", coords)
-          }
+    const coords = [];
+    let newCoords;
+    for (let user of users) {
+      for (let data of locationData) {
+        // console.log("THIS", user.cities[0].city, data.last_location)
+        if (user.cities[0].city === data.last_location) {     
+          // console.log("THIS", data);
+             
+          // newCoords = {
+          //   "lat": data.lat,
+          //   "long": data.long
+          // }
+          // coords.push(newCoords); console.log("COORDS", coords)
         }
-        user["coords"] = coords
+      }
+      user["coords"] = coords
+    }
+
+    /**
+     * 
+     * 
+     * 
+     * filtering still not working correctly for for multiple users with different locations
+     * 
+     * 
+     * may want to add location property with each location dataset to all users before filtering for distance
+     * 
+     * 
+     *  */ 
+
+    let filteredUserLocations = [];
+    let features = [];
+    for (let user of users) { console.log(user, "@@@@@@@@@@@@@@@")
+      if (user.cities.length) {
+        for (let city of user.cities) {          
+          let userLocation = locationData.filter(data => data.last_location === city.city);
+          filteredUserLocations.push(userLocation);
+          // console.log("############DATA", city)
+        // } console.log(filteredUserLocations, 'LOCATIONS*********')
+    }
+      for (let location of filteredUserLocations) { console.log(location, "----------------------------", "filtered", filteredUserLocations)
+        features.push(
+          {
+            "type": "Feature",
+            "properties": {
+              "city": location[0].last_location
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [location[0].lat, location[0].long]
+            }
+          }
+        )
       }
 
-      for (let user of users) {
-        // console.log("USER CITIES", user.cities)
-        // console.log("USER COORDS", user.coords)
-        console.log("LOCATION DATA", locationData)
-      }
-        // if (userLocations.includes)
-        // user["locationHistory"] = {
-        //   "type": "FeatureCollection",
-        //   "features":
-        //   [
-        //     {
-        //       "type": "Feature",
-        //       "properties": {
-        //         "city": "Kona"
-        //       },
-        //       "geometry": {
-        //         "type": "Point",
-        //         "coordinates": [userLocations.lat, userLocations.long]
-        //       }
-        //     }
-        //   ]
-        // }
-      
-
+      user["locationHistory"] = {
+        "type": "FeatureCollection",
+        "features": features
+      } 
+    } 
+  }   
       const metadata = {
           "path": "/users",
           "query": {
@@ -169,7 +193,7 @@ router.get("/users", async function (req, res, next) {
       
       const results =[];
       
-      for (let user of users) {
+      for (let user of users) { console.log(user, "============")
         const { user_id, user_name, user_age, user_fav_color } = user;
 
         results.push(
@@ -183,15 +207,16 @@ router.get("/users", async function (req, res, next) {
               "fav_color": user_fav_color
             }
           });
-        }   
+        } 
+        console.log(results, "+++++++++++++++++++++++++")  
         
       return res.json({
           "metadata": metadata,
           "num_results": results.length,
           "results": results
         });
-
   }
+
   catch (err) {
       return next(err);
   }
